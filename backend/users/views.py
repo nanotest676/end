@@ -6,6 +6,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authtoken.views import obtain_auth_token
+from django.urls import path
 
 User = get_user_model()
 
@@ -35,3 +37,7 @@ class SetPasswordView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+urlpatterns = [
+    path('auth/', obtain_auth_token, name='api_token_auth'),
+]
