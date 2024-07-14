@@ -19,16 +19,28 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
         fields = ['id', 'ingredient', 'amount']
 
 class RecipeSerializer(serializers.ModelSerializer):
-    user = serializers.ReadOnlyField(source='user.username')
-
     class Meta:
         model = Recipe
-        fields = ['id', 'name', 'user', 'description', 'ingredients', 'instructions', 'created_at']
+        fields = ['id', 'author', 'name', 'text', 'cooking_time', 'ingredients', 'tags']
 
     def create(self, validated_data):
-        request = self.context.get('request')
-        validated_data['user'] = request.user
-        return super().create(validated_data)
+        # Удаляем автора из validated_data, если он там есть
+        validated_data.pop('author', None)
+        # Получаем автора из аргументов
+        author = self.context['request'].user
+        # Создаем объект рецепта
+        recipe = Recipe.objects.create(author=author, **validated_data)
+        
+        # Добавляем связанные данные для ингредиентов и тегов
+        ingredients_data = self.initial_data.get('ingredients')
+        for ingredient_data in ingredients_data:
+            ingredient, created = Ingredient.objects.get_or_create(**ingredient_data)
+            RecipeIngredient.objects.create(recipe=recipe, ingredient=ingredient)
+
+        tags_data = self.initial_data.get('tags')
+        recipe.tags.set(tags_data)
+
+        return recipe
 
     def update(self, instance, validated_data):
         ingredients_data = validated_data.pop('ingredients')

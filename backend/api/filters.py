@@ -70,4 +70,3 @@ class RecipeFilter(filters.FilterSet):
         if not tags:
             return Recipe.objects.none()
         return super().filter_queryset(queryset)
-

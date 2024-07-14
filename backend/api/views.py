@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
 from users.models import Follow
-from recipes.models import Favorite, Recipe, Tag, Ingredient, ShoppingCart
+from recipes.models import Favorite, Recipe, Tag, Ingredient, RecipeIngredient
 from .filters import IngredientFilter, RecipeFilter
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
@@ -120,19 +120,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def favorite(self, request, pk=None):
         return self._manage_favorite(Favorite, request, pk)
 
-    @action(methods=['post', 'delete'], detail=True, permission_classes=[permissions.IsAuthenticated])
-    def add_to_shopping_cart(self, request, pk=None):
+    def _manage_favorite(self, model, request, pk):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=pk)
-        instance = ShoppingCart.objects.filter(user=user, recipe=recipe)
+        instance = model.objects.filter(user=user, recipe=recipe)
         if request.method == 'POST':
             if instance.exists():
-                return Response({'error': 'Этот рецепт уже в корзине покупок.'}, status=status.HTTP_400_BAD_REQUEST)
-            ShoppingCart.objects.create(user=user, recipe=recipe)
+                return Response({'error': f'This recipe is already in your {model.name}.'}, status=status.HTTP_400_BAD_REQUEST)
+            model.objects.create(user=user, recipe=recipe)
             return Response(status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
             if instance.exists():
                 instance.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
-            return Response({'error': 'Этого рецепта нет в корзине покупок.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': f'This recipe is not in your {model.name}.'}, status=status.HTTP_400_BAD_REQUEST)
 
